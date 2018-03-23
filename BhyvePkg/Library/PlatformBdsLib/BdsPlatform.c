@@ -27,9 +27,6 @@ EFI_EVENT     mEmuVariableEvent;
 BOOLEAN       mDetectVgaOnly;
 
 
-// Maintain a reference to the original HandleProtocol function
-STATIC EFI_HANDLE_PROTOCOL gBS_HandleProtocol;
-
 
 //
 // Type definitions
@@ -1005,66 +1002,6 @@ Returns:
   Status = BaseMemoryTest (MemoryTestLevel);
 }
 
-/**
-  Override HandleProtocol() to generate a shadowed version of the
-  Interface if it is a device path protocol. This is a workaround
-  for guests that damage the device path structure.
-**/
-EFI_STATUS
-EFIAPI
-BhyveHandleProtocol (
-  IN EFI_HANDLE       UserHandle,
-  IN EFI_GUID         *Protocol,
-  OUT VOID            **Interface
-  )
-{
-  EFI_STATUS                         Status;
-  STATIC EFI_DEVICE_PATH_PROTOCOL   *TempFilePath;
-  EFI_DEVICE_PATH_PROTOCOL          *HandleFilePath;
-  UINTN                              HandleFilePathSize;
-  UINTN                              NumHandles;
-  EFI_DEVICE_PATH_PROTOCOL          *DPtr;
-  CHAR16                            *DevPathStr;
-
-  Status = gBS_HandleProtocol(UserHandle, Protocol, Interface);
-  if (EFI_ERROR(Status)) {
-    return Status;
-  }
-
-  if (CompareGuid (&gEfiDevicePathProtocolGuid, Protocol)) {
-     if (TempFilePath == NULL) {
-        TempFilePath = AllocateZeroPool(512); // XXX this should be resizable
-     }
-
-     HandleFilePath = (EFI_DEVICE_PATH_PROTOCOL *)*Interface;
-
-     NumHandles = 0;
-     DPtr = HandleFilePath;
-     while (!IsDevicePathEnd(DPtr)) {
-       DPtr = NextDevicePathNode(DPtr);
-       NumHandles++;
-     }
-
-     // Return immediately if there aren't many handlers because the guest is
-     // unlikely to damage it.
-     if (NumHandles < 2)
-        return Status;
-
-     HandleFilePathSize = GetDevicePathSize (HandleFilePath);
-
-     DevPathStr = DevicePathToStr(HandleFilePath);
-     if (DevPathStr != NULL) {
-        DEBUG((EFI_D_INFO, "Bhyve-HandleProtocol: Copying DevPath: %s [%d]\n",
-	      DevPathStr, HandleFilePathSize));
-       FreePool(DevPathStr);
-     }
-     CopyMem(TempFilePath, HandleFilePath, HandleFilePathSize);
-
-     *Interface = TempFilePath;
-  }
-  return Status;
-}
-
 VOID
 EFIAPI
 PlatformBdsPolicyBehavior (
@@ -1238,8 +1175,6 @@ Returns:
 
 
   DEBUG((EFI_D_INFO, "Overriding HandleProtocol for bhyve guests\n"));
-  gBS_HandleProtocol = gBS->HandleProtocol;
-  gBS->HandleProtocol = BhyveHandleProtocol;
 
   //
   // Check whether the user input after the duration time has expired

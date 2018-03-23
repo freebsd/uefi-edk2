@@ -1174,8 +1174,6 @@ Returns:
   }
 
 
-  DEBUG((EFI_D_INFO, "Overriding HandleProtocol for bhyve guests\n"));
-
   //
   // Check whether the user input after the duration time has expired
   //

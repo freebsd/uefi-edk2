@@ -438,6 +438,7 @@
 
   OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
   OvmfPkg/VirtioBlkDxe/VirtioBlk.inf
+  OvmfPkg/VirtioScsiDxe/VirtioScsi.inf
   BhyvePkg/EmuVariableFvbRuntimeDxe/Fvb.inf {
     <LibraryClasses>
       PlatformFvbLib|BhyvePkg/Library/EmuVariableFvbLib/EmuVariableFvbLib.inf
